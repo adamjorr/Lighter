@@ -562,11 +562,12 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 		}
 	}
 	// It seems serialization is faster than parallel. NOT true now!
+	int sampled = 0;
 	if ( numOfThreads == 1 ) //|| stable == true )
 	{
 		while ( reads.Next() != 0 )
 		{
-			SampleKmersInRead( reads.seq, reads.qual, kmerLength, alpha, kmerCode, &kmers ) ;
+			SampleKmersInRead( reads.seq, reads.qual, kmerLength, alpha, kmerCode, &kmers , &sampled) ;
 		}
 	}
 	else //if ( 0 ) 
@@ -671,12 +672,13 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	// Step 2: Store the trusted kmers
 	//printf( "Begin step2.\n") ; fflush( stdout ) ;
 	reads.Rewind() ;
+	int ntrusted = 0;
 	if ( numOfThreads == 1 )
 	{
 		while ( reads.Next() )
 		{
 			StoreTrustedKmers( reads.seq, reads.qual, kmerLength, badQuality, threshold,
-					kmerCode, &kmers, &trustedKmers ) ;
+					kmerCode, &kmers, &trustedKmers, &ntrusted ) ;
 		}
 	}
 	else //if ( 0 )
@@ -704,6 +706,11 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 		}
 	}
 	PrintLog( "Finish storing trusted kmers" ) ;
+	//for ( i = 0; i < MAX_KMER_LENGTH+1; ++i){
+	//	PrintLog((std::to_string(i) + ":" + std::to_string(threshold[i])).c_str());
+	//}
+	PrintLog((std::to_string(sampled) + " Kmers sampled in hash A").c_str());
+	PrintLog((std::to_string(ntrusted) + " Kmers trusted.").c_str());
 	if ( saveTrustedKmers != NULL )
 	{
 		trustedKmers.BloomOutput( saveTrustedKmers ) ;

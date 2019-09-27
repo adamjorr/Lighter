@@ -181,7 +181,7 @@ void *SampleKmers_Thread( void *arg )
 	return NULL ;
 }
 
-void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, KmerCode &kmerCode, Store *kmers )
+void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, KmerCode &kmerCode, Store *kmers, int *sampled)
 {
 	int i ;
 	double p ;
@@ -219,6 +219,7 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 	{
 		//printf( "%lf %lf\n", p, alpha ) ;
 		kmers->Put( kmerCode ) ;
+		(*sampled)++;
 	}
 
 	for ( ; read[i] ; ++i )
@@ -240,6 +241,7 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 			  }*/
 			//printf( "%lf %lf\n", p, alpha ) ;
 			kmers->Put( kmerCode ) ;
+			(*sampled)++;
 		}
 	}
 }
@@ -280,9 +282,9 @@ void *StoreKmers_Thread( void *arg )
 				if ( qual[len - 1] == '\n' )
 					qual[len - 1] = '\0' ;
 			}
-
+			int foo = 0;
 			StoreTrustedKmers( read, qual, myArg->kmerLength, myArg->badQuality, myArg->threshold, 
-				kmerCode, myArg->kmers, myArg->trustedKmers ) ;
+				kmerCode, myArg->kmers, myArg->trustedKmers, &foo ) ;
 		}
 	}
 
@@ -293,7 +295,7 @@ void *StoreKmers_Thread( void *arg )
 }
 
 void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality, int *threshold,
-	KmerCode &kmerCode, Store *kmers, Store *trustedKmers )
+	KmerCode &kmerCode, Store *kmers, Store *trustedKmers, int *counter )
 {
 	bool occur[MAX_READ_LENGTH] ;
 	bool trustedPosition[MAX_READ_LENGTH] ;
@@ -414,6 +416,7 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			   //	printf( "Into table B: %d %d\n", i, oneCnt ) ;
 			   //printf( "%d %lld\n", i, kmerCode ) ;
 			   trustedKmers->Put( kmerCode, true ) ;
+			   (*counter)++;
 		   }
 	}
 }
