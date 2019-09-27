@@ -564,7 +564,10 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	// It seems serialization is faster than parallel. NOT true now!
 	int sampled = 0;
 	File sampledkmersout;
-	sampledkmersout.Open(strcat(reads.GetOutputDirectory(),"/sampled.txt"), "w");
+	char sampledfilename[1024];
+	strcpy(sampledfilename, reads.GetOutputDirectory());
+	strcat(sampledfilename, "/sampled.txt");
+	sampledkmersout.Open(sampledfilename, "w");
 	if ( numOfThreads == 1 ) //|| stable == true )
 	{
 		while ( reads.Next() != 0 )
@@ -677,7 +680,10 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	reads.Rewind() ;
 	int ntrusted = 0;
 	File trustfile;
-	trustfile.Open(strcat(reads.GetOutputDirectory(),"/trusted.txt"), "w");
+	char trustfilename[1024];
+	strcpy(trustfilename, reads.GetOutputDirectory());
+	strcat(trustfilename, "/trusted.txt");
+	trustfile.Open(trustfilename, "w");
 
 	if ( numOfThreads == 1 )
 	{
