@@ -412,7 +412,6 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			if ( trustedPosition[i - kmerLength] ) 
 				--oneCnt ;
 		}
-		std::string kmerstr(readstr, i-kmerLength, kmerLength);
 		kmerCode.Append( read[i] ) ;
 		if ( oneCnt == kmerLength 
 		   )//|| ( i - kmerLength + 1 >= kmerLength - 1 && i + kmerLength - 1 < readLength && oneCnt >= kmerLength - 1 ) )
@@ -422,6 +421,7 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			   //if ( !strcmp( read, "ATCATCAGAGGGTCTCGTGTAGTGCTCCAGTACCTGAAATGCTTACGTTG" ) )
 			   //	printf( "Into table B: %d %d\n", i, oneCnt ) ;
 			   //printf( "%d %lld\n", i, kmerCode ) ;
+		   	   std::string kmerstr(readstr, i-kmerLength, kmerLength);
 			   trustedKmers->Put( kmerCode, true );
 			   (*counter)++;
 			   trustfile->Puts(kmerstr.append("\n").c_str());
