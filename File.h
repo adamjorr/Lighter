@@ -112,7 +112,7 @@ public:
 		return NULL ;
 	}
 	
-	int Puts( char *buf )
+	int Puts(const char *buf )
 	{
 		if ( type == COMPRESSED_FILE )
 		{

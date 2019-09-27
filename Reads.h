@@ -159,6 +159,10 @@ class Reads
 		{
 			strcpy( outputDirectory, d ) ;
 		}
+
+		char* GetOutputDirectory(){
+			return outputDirectory;
+		}
 		
 
 		bool HasQuality()

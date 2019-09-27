@@ -1,4 +1,6 @@
 #include "GetKmers.h"
+#include <ostream>
+#include <iostream>
 
 struct _SampleKmersPutThreadArg
 {
@@ -181,7 +183,7 @@ void *SampleKmers_Thread( void *arg )
 	return NULL ;
 }
 
-void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, KmerCode &kmerCode, Store *kmers, int *sampled)
+void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, KmerCode &kmerCode, Store *kmers, int *sampled, File *sampledout)
 {
 	int i ;
 	double p ;
@@ -200,6 +202,7 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 			badQualPartialCount[i + 1] = i + 1 ;
 	}*/
 	kmerCode.Restart() ;
+	std::string readstr(read);
 	for ( i = 0 ; i < kmerLength && read[i] ; ++i )
 	{
 		kmerCode.Append( read[i] ) ;
@@ -218,14 +221,16 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 	if ( p < alpha * factor )
 	{
 		//printf( "%lf %lf\n", p, alpha ) ;
+		std::string kmerstr(readstr, i - kmerLength, kmerLength);
 		kmers->Put( kmerCode ) ;
 		(*sampled)++;
+		sampledout->Puts(kmerstr.append("\n").c_str());
 	}
 
 	for ( ; read[i] ; ++i )
 	{
 		kmerCode.Append( read[i] ) ;
-
+		std::string kmerstr(readstr, i - kmerLength, kmerLength);
 		/*if ( badQualPartialCount[i + 1] - badQualPartialCount[i - kmerLength + 1] == 0 )
 			factor = 1 ;
 		else
@@ -242,6 +247,8 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 			//printf( "%lf %lf\n", p, alpha ) ;
 			kmers->Put( kmerCode ) ;
 			(*sampled)++;
+			sampledout->Puts(kmerstr.append("\n").c_str());
+
 		}
 	}
 }

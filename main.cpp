@@ -563,11 +563,13 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	}
 	// It seems serialization is faster than parallel. NOT true now!
 	int sampled = 0;
+	File sampledkmersout;
+	sampledkmersout.Open(strcat(reads.GetOutputDirectory(),"/sampled.txt"), "w");
 	if ( numOfThreads == 1 ) //|| stable == true )
 	{
 		while ( reads.Next() != 0 )
 		{
-			SampleKmersInRead( reads.seq, reads.qual, kmerLength, alpha, kmerCode, &kmers , &sampled) ;
+			SampleKmersInRead( reads.seq, reads.qual, kmerLength, alpha, kmerCode, &kmers , &sampled, &sampledkmersout) ;
 		}
 	}
 	else //if ( 0 ) 
@@ -597,6 +599,7 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			pthread_join( threads[i], &pthreadStatus ) ;
 		}
 	}
+	sampledkmersout.Close();
 	if ( numOfThreads > 1 ) //&& stable == false )
 		free( samplePatterns ) ;
 	//kmers.BloomInput( "sample_bf.out" ) ;
