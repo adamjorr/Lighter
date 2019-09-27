@@ -291,7 +291,7 @@ void *StoreKmers_Thread( void *arg )
 			}
 			int foo = 0;
 			StoreTrustedKmers( read, qual, myArg->kmerLength, myArg->badQuality, myArg->threshold, 
-				kmerCode, myArg->kmers, myArg->trustedKmers, &foo ) ;
+				kmerCode, myArg->kmers, myArg->trustedKmers, &foo, NULL ) ;
 		}
 	}
 
@@ -302,7 +302,7 @@ void *StoreKmers_Thread( void *arg )
 }
 
 void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality, int *threshold,
-	KmerCode &kmerCode, Store *kmers, Store *trustedKmers, int *counter )
+	KmerCode &kmerCode, Store *kmers, Store *trustedKmers, int *counter, File *trustfile )
 {
 	bool occur[MAX_READ_LENGTH] ;
 	bool trustedPosition[MAX_READ_LENGTH] ;
@@ -412,7 +412,7 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			if ( trustedPosition[i - kmerLength] ) 
 				--oneCnt ;
 		}
-
+		std::string kmerstr(read, i-kmerLength, kmerLength);
 		kmerCode.Append( read[i] ) ;
 		if ( oneCnt == kmerLength 
 		   )//|| ( i - kmerLength + 1 >= kmerLength - 1 && i + kmerLength - 1 < readLength && oneCnt >= kmerLength - 1 ) )
@@ -422,8 +422,9 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			   //if ( !strcmp( read, "ATCATCAGAGGGTCTCGTGTAGTGCTCCAGTACCTGAAATGCTTACGTTG" ) )
 			   //	printf( "Into table B: %d %d\n", i, oneCnt ) ;
 			   //printf( "%d %lld\n", i, kmerCode ) ;
-			   trustedKmers->Put( kmerCode, true ) ;
+			   trustedKmers->Put( kmerCode, true );
 			   (*counter)++;
+			   trustfile->Puts(kmerstr.append("\n").c_str());
 		   }
 	}
 }

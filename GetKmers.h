@@ -57,5 +57,5 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 
 void *StoreKmers_Thread( void *arg ) ;
 void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality, int *threshold,  
-	KmerCode &kmerCode, Store *kmers, Store *trustedKmers, int *counter ) ;
+	KmerCode &kmerCode, Store *kmers, Store *trustedKmers, int *counter, File *trustfile ) ;
 #endif

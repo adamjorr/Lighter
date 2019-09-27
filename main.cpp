@@ -676,12 +676,15 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	//printf( "Begin step2.\n") ; fflush( stdout ) ;
 	reads.Rewind() ;
 	int ntrusted = 0;
+	File trustfile;
+	trustfile.Open(strcat(reads.GetOutputDirectory(),"/trusted.txt"), "w");
+
 	if ( numOfThreads == 1 )
 	{
 		while ( reads.Next() )
 		{
 			StoreTrustedKmers( reads.seq, reads.qual, kmerLength, badQuality, threshold,
-					kmerCode, &kmers, &trustedKmers, &ntrusted ) ;
+					kmerCode, &kmers, &trustedKmers, &ntrusted, &trustfile ) ;
 		}
 	}
 	else //if ( 0 )
@@ -708,6 +711,7 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			pthread_join( threads[i], &pthreadStatus ) ;
 		}
 	}
+	trustfile.Close();
 	PrintLog( "Finish storing trusted kmers" ) ;
 	//for ( i = 0; i < MAX_KMER_LENGTH+1; ++i){
 	//	PrintLog((std::to_string(i) + ":" + std::to_string(threshold[i])).c_str());
