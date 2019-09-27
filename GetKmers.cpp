@@ -307,7 +307,7 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 	bool occur[MAX_READ_LENGTH] ;
 	bool trustedPosition[MAX_READ_LENGTH] ;
 	int i ;
-
+	std::string readstr(read);
 	kmerCode.Restart() ;
 	for ( i = 0 ; i < kmerLength ; ++i )
 	{
@@ -412,7 +412,7 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			if ( trustedPosition[i - kmerLength] ) 
 				--oneCnt ;
 		}
-		std::string kmerstr(read, i-kmerLength, kmerLength);
+		std::string kmerstr(readstr, i-kmerLength, kmerLength);
 		kmerCode.Append( read[i] ) ;
 		if ( oneCnt == kmerLength 
 		   )//|| ( i - kmerLength + 1 >= kmerLength - 1 && i + kmerLength - 1 < readLength && oneCnt >= kmerLength - 1 ) )
