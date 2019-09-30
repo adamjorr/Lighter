@@ -741,6 +741,11 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 	// Different ways of parallel depending on the number of threads.
 	if ( numOfThreads == 1 )
 	{
+		File correctionfile;
+		char correctionfilename[1024];
+		strcpy(correctionfilename, reads.GetOutputDirectory());
+		strcat(correctionfilename, "/corrected.txt");
+		correctionfile.Open(correctionfilename, "w");
 		while ( reads.Next() )
 		{
 			//readId = reads.id ;
@@ -769,8 +774,18 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			}
 			}
 			continue ;*/
+
+			std::string read_uncorrected( reads.seq );
+			// std::vector<bool> corrected;
+
 			int info ;
 			int tmp = ErrorCorrection_Wrapper( reads.seq, reads.qual, kmerCode, badQuality, &trustedKmers, badPrefix, badSuffix, info ) ;
+
+			for (int i = 0; i < read_uncorrected.length(); ++i){
+				// corrected.push_back(read_uncorrected[i] == reads.seq[i]);
+				correctionfile.Puts(std::to_string(read_uncorrected[i] != reads.seq[i]).c_str());
+			}
+			correctionfile.Puts("\n");
 
 			//if ( reads.HasQuality() )
 			//	
@@ -780,6 +795,7 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 
 			reads.Output( tmp, badPrefix, badSuffix, info, ALLOW_TRIMMING ) ;
 		}
+		correctionfile.Close();
 	}
 	else if ( numOfThreads == 2 )
 	{
