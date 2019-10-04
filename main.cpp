@@ -746,6 +746,12 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 		strcpy(correctionfilename, reads.GetOutputDirectory());
 		strcat(correctionfilename, "/corrected.txt");
 		correctionfile.Open(correctionfilename, "w");
+
+		File fixesfile;
+		char fixesfilename[1024];
+		strcpy(fixesfilename, reads.GetOutputDirectory());
+		strcat(fixesfilename, "/fixes.txt");
+		fixesfile.Open(fixesfilename, "w");
 		while ( reads.Next() )
 		{
 			//readId = reads.id ;
@@ -779,7 +785,7 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			// std::vector<bool> corrected;
 
 			int info ;
-			int tmp = ErrorCorrection_Wrapper( reads.seq, reads.qual, kmerCode, badQuality, &trustedKmers, badPrefix, badSuffix, info ) ;
+			int tmp = ErrorCorrection_Wrapper( reads.seq, reads.qual, kmerCode, badQuality, &trustedKmers, badPrefix, badSuffix, info, fixesfile) ;
 
 			for (int i = 0; i < read_uncorrected.length(); ++i){
 				// corrected.push_back(read_uncorrected[i] == reads.seq[i]);
@@ -796,6 +802,7 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			reads.Output( tmp, badPrefix, badSuffix, info, ALLOW_TRIMMING ) ;
 		}
 		correctionfile.Close();
+		fixesfile.Close();
 	}
 	else if ( numOfThreads == 2 )
 	{

@@ -16,6 +16,7 @@ void *ErrorCorrection_Thread( void *arg )
 	struct _ErrorCorrectionThreadArg *myArg = ( struct _ErrorCorrectionThreadArg *)arg ; 	
 	bool init = true ;
 	KmerCode kmerCode( myArg->kmerLength ) ;
+	File dummy;
 	while ( 1 )
 	{
 		pthread_mutex_lock( myArg->lock ) ;
@@ -28,7 +29,7 @@ void *ErrorCorrection_Thread( void *arg )
 		if ( ind >= myArg->batchSize )
 			break ;
 		correction = ErrorCorrection_Wrapper( myArg->readBatch[ind].seq, myArg->readBatch[ind].qual, kmerCode, 
-					myArg->badQuality, myArg->trustedKmers, badPrefix, badSuffix, info ) ;
+					myArg->badQuality, myArg->trustedKmers, badPrefix, badSuffix, info, dummy ) ;
 		myArg->readBatch[ind].correction = correction ;
 		myArg->readBatch[ind].badPrefix = badPrefix ;
 		myArg->readBatch[ind].badSuffix = badSuffix ;
@@ -193,7 +194,7 @@ int CreateAnchor( char *read, char *qual, int *fix, bool *storedKmer, KmerCode &
 	return maxLenStats[0] ;
 }
 
-int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrection, char badQuality, Store *kmers, int &badPrefix, int &badSuffix, int &info )
+int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrection, char badQuality, Store *kmers, int &badPrefix, int &badSuffix, int &info, File &fixesfile)
 {
 	int i, j, k ;	
 	bool storedKmer[MAX_READ_LENGTH] ;
@@ -246,8 +247,10 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 	}
 
 	readLength = i ;
-	if ( readLength < kmerLength )
+	if ( readLength < kmerLength ){
+		fixesfile.Puts("read too short;");
 		return 0 ;
+	}
 	
 	trimStart = readLength ;
 	for ( i = 0 ; i < readLength ; ++i )
@@ -281,6 +284,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		if ( createAnchorPos == -1 )
 		{
 			info = 3 ;
+			fixesfile.Puts("can't find anchor;");
 			return -1 ;
 		}
 
@@ -289,13 +293,6 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 	//printf( "%d %d %d\n", kmerLength, kmerCnt, i ) ;	
 
-#ifdef DEBUG
-	printf( "%s\n", read ) ;
-	for ( i = 0 ; i < kmerCnt ; ++i )
-		printf( "%d", storedKmer[i] ) ;
-	printf( "\n" ) ;
-#endif
-	//exit( 1 ) ;
 	// All the kmers are reliable. 
 	for ( i = 0 ; i < kmerCnt ; ++i )
 	{
@@ -307,8 +304,10 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		printf( "## %d\n", i ) ;
 		exit( 1 ) ;
 	}*/
-	if ( i >= kmerCnt )
+	if ( i >= kmerCnt ){
+		fixesfile.Puts("all kmers trusted;");
 		return 0 ;
+	}
 
 	// Find the first trusted kmer
 	int longestStoredKmerCnt = 0, storedKmerCnt = 0 ;
@@ -337,6 +336,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 	if ( longestStoredKmerCnt == 0 )
 	{
+		fixesfile.Puts("no kmers trusted;");
 		info = 3 ;
 		return -1 ;
 	}
@@ -344,6 +344,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 	if ( longestStoredKmerCnt >= kmerCnt )
 	{
 		//printf( "0%s\n", read ) ;
+		fixesfile.Puts("all kmers trusted 2: this should never happen;");
 		return 0 ;
 	}
 
@@ -369,7 +370,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 		if ( longestStoredKmerCnt < kmerLength )
 		{
-			for ( i = k - 1 + 1 ; i < k - 1 + kmerLength - 1 + 1 ; ++i  )
+			for ( i = k ; i < k + kmerLength - 1 ; ++i  )
 			{
 				kmerCode.Append( read[i] ) ;
 			}
@@ -468,6 +469,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		kmerCode = kmerCode | (uint64_t)nucToNum[ read[i] - 'A' ] ;
 	}*/
 
+	std::string rhs = std::to_string(i);
 
 	for ( ; i < readLength ; )
 	{
@@ -556,9 +558,6 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			}
 			//printf( "%d\n", j ) ;
 		}
-#ifdef DEBUG
-		printf( "+hi %d: %d %d=>%d, (%d)\n", i, maxTo, to, maxChange, maxCnt ) ;
-#endif
 		if ( testCnt > 1 )
 			alternativeCnt += ( testCnt - 1 ) ;
 		// TODO: if maxTo is far from i, then we may in a repeat. Try keep this base unfixed
@@ -654,7 +653,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		if ( longestStoredKmerCnt < kmerLength )
 		{
 			kmerCode.Restart() ;
-			for ( i = tag + 1 - 1 ; i < tag + kmerLength - 1 ; ++i )
+			for ( i = tag ; i < tag + kmerLength - 1 ; ++i )
 			{
 				kmerCode.Append( read[i] ) ;	
 			}
@@ -748,6 +747,9 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		}
 	}
 	//kmerCode = ( kmerCode << (uint64_t)2 ) & mask ;
+	std::string lhs = std::to_string(tag);
+	fixesfile.Puts((lhs + "-" + rhs + ":").c_str());
+
 	for ( i = tag - 1 ; i >= 0 ;  )
 	{
 		KmerCode fixedKmerCode( kmerCode ) ;
@@ -913,6 +915,18 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 	}
 	printf( "\n" ) ;
 #endif
+
+	int fixedfix;
+	std::string fixedstr;
+	for (i = 0; i < readLength; ++i){
+		fixedfix = fix[i];
+		if (fixedfix < 0){
+			fixedfix == -1 ? fixedfix = 5 : fixedfix = 6;
+		}
+		fixedstr = std::to_string(fixedfix);
+		fixesfile.Puts(fixedstr.c_str());
+	}
+	fixesfile.Puts(";");
 
 	int ret = 0 ;
 	double correctCnt = 0 ;
@@ -1098,7 +1112,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 	return ret ;
 }
 
-int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char badQuality, Store *kmers, int &badPrefix, int &badSuffix, int &info )
+int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char badQuality, Store *kmers, int &badPrefix, int &badSuffix, int &info, File &fixesfile )
 {
 	int correction ;
 	int tmpBadPrefix, tmpBadSuffix, tmpInfo ;
@@ -1107,12 +1121,13 @@ int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char ba
 
 	info = 0 ;
 	correction = ErrorCorrection( read, qual, kmerCode, MAX_CORRECTION, badQuality, kmers, 
-			tmpBadPrefix, tmpBadSuffix, tmpInfo ) ;
+			tmpBadPrefix, tmpBadSuffix, tmpInfo, fixesfile ) ;
 	
 	if ( correction == -1 )
 	{
 		badPrefix = badSuffix = 0 ;
 		info = tmpInfo ;
+		fixesfile.Puts("\n");
 		return -1 ;
 	}
 
@@ -1125,7 +1140,7 @@ int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char ba
 		char c = read[badPrefix] ;
 		read[ badPrefix ] = '\0' ;
 		tmp = ErrorCorrection( read, qual, kmerCode, MAX_CORRECTION, badQuality, kmers,   
-				tmpBadPrefix, tmpBadSuffix, tmpInfo ) ;
+				tmpBadPrefix, tmpBadSuffix, tmpInfo, fixesfile ) ;
 
 		read[ badPrefix ] = c ;
 		if ( tmp != -1 )
@@ -1143,7 +1158,7 @@ int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char ba
 		int tmp ;
 
 		tmp = ErrorCorrection( read + len - badSuffix, qual + len - badSuffix, kmerCode, MAX_CORRECTION, badQuality, kmers, 
-				tmpBadPrefix, tmpBadSuffix, tmpInfo ) ;	
+				tmpBadPrefix, tmpBadSuffix, tmpInfo, fixesfile ) ;	
 		if ( tmp != -1 )
 		{
 			badSuffix = tmpBadSuffix ;
@@ -1164,5 +1179,6 @@ int ErrorCorrection_Wrapper( char *read, char *qual, KmerCode& kmerCode, char ba
 	{
 		read[len - badSuffix] = '\0' ;
 	}
+	fixesfile.Puts("\n");
 	return correction ;
 }
