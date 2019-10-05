@@ -287,7 +287,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			fixesfile.Puts("can't find anchor;");
 			return -1 ;
 		}
-
+		fixesfile.Puts("(NOANCHOR)");
 		++alternativeCnt ;
 	}
 
@@ -435,6 +435,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 						if ( kmers->IsIn( tmpKmerCode ) ) 
 						{	
 							++alternativeCnt ;
+							fixesfile.Puts("(RANCHORADJUST)");
 							// Test whether this branch makes sense
 							int t = 0 ;
 							for ( t = 0 ; t <= kmerLength / 2 && read[i + t] ; ++t ) // and it is should be a very good fix 
@@ -558,8 +559,10 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			}
 			//printf( "%d\n", j ) ;
 		}
-		if ( testCnt > 1 )
+		if ( testCnt > 1 ){
 			alternativeCnt += ( testCnt - 1 ) ;
+			fixesfile.Puts("(RMULTIPLETEST)");
+		}
 		// TODO: if maxTo is far from i, then we may in a repeat. Try keep this base unfixed
 		//       see whether the next fixing makes sense.	
 		if ( maxTo == -1 || ( maxCnt > 1 && ( maxTo <= to || to - i + 1 < kmerLength ) ) )
@@ -718,6 +721,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 						if ( kmers->IsIn( tmpKmerCode ) ) 
 						{
 							++alternativeCnt ;
+							fixesfile.Puts("(LANCHORADJUST)");
 							// Test whether this branch makes sense
 							int t = 0 ;
 							for ( t = 0 ; t <= kmerLength / 2 && tag + j - t - 1 >= 0 ; ++t ) // and it is should be a very good fix 
@@ -832,9 +836,10 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 #ifdef DEBUG
 		printf( "-hi %d: %d %d=>%d, (%d)\n", i, minTo, to, minChange, minCnt ) ;	
 #endif
-		if ( testCnt > 1 )
+		if ( testCnt > 1 ){
 			alternativeCnt += ( testCnt - 1 ) ;
-		
+			fixesfile.Puts("(LMULTIPLETEST)");
+		}
 		if ( minTo == readLength + 1 || ( minCnt > 1 && ( minTo >= to || i - to + 1 < kmerLength ) ) )
 		{
 			//printf( "-%s\n", read ) ;
@@ -967,12 +972,15 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 	bool overCorrected = false ;
 	int adjustMaxCor = 0 ;
-	for ( i = 0 ; i < readLength ; ++i )	
-		if ( trusted[i] && fix[i] != -1 )
-			break ;
-	if ( alternativeCnt == 0 && i >= readLength )
-		adjustMaxCor = 1 ;
-
+	for ( i = 0 ; i < readLength ; ++i )  //for every site
+		if ( trusted[i] && fix[i] != -1 ) //if site overlaps trusted kmer and gets fixed
+			break ; // i < readLength
+	if ( alternativeCnt == 0 && i >= readLength ) //if alternativeCnt == 0 AND all sites overlapping trusted kmers aren't fixed
+		adjustMaxCor = 1 ; // alternativeCnt != 0 if: there are no trusted kmers, there are multiple corrections that
+	//could change a kmer to trusted (even if only 1 is longest), or the right side of the anchor must be adjusted
+	fixesfile.Puts("(ADJUSTMAXCOR=");
+	fixesfile.Puts(std::to_string(adjustMaxCor).c_str());
+	fixesfile.Puts(")");
 	for ( i = 0 ; i < readLength ; ++i )
 	{
 		int overCorrectWindow = 20 ;
