@@ -221,7 +221,7 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 	if ( p < alpha * factor )
 	{
 		//printf( "%lf %lf\n", p, alpha ) ;
-		std::string kmerstr(readstr, i - kmerLength, kmerLength);
+		std::string kmerstr(readstr, 0, kmerLength);
 		kmers->Put( kmerCode ) ;
 		(*sampled)++;
 		sampledout->Puts(kmerstr.append("\n").c_str());
@@ -230,7 +230,7 @@ void SampleKmersInRead( char *read, char *qual, int kmerLength, double alpha, Km
 	for ( ; read[i] ; ++i )
 	{
 		kmerCode.Append( read[i] ) ;
-		std::string kmerstr(readstr, i - kmerLength, kmerLength);
+		std::string kmerstr(readstr, i - kmerLength + 1, kmerLength);
 		/*if ( badQualPartialCount[i + 1] - badQualPartialCount[i - kmerLength + 1] == 0 )
 			factor = 1 ;
 		else
@@ -332,7 +332,8 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 
 	int readLength = i ;
 	int occurCnt = readLength - kmerLength + 1 ;
-	int zeroCnt = 0, oneCnt = 0 ;
+	int zeroCnt = 0;
+	int oneCnt = 0 ;
 
 	/*printf( "%s\n", read ) ;
 	for ( i = 0 ; i < occurCnt ; ++i )
@@ -340,6 +341,8 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 	printf( "\n" ) ;*/
 
 	// Set the trusted positions
+	int incount[200];
+	int totalcount[200];
 	for ( i = 0 ; i < readLength ; ++i )
 	{
 		if ( i >= kmerLength )
@@ -352,14 +355,20 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 
 		if ( i < occurCnt )
 		{
+			if(readstr == "AAGTGGGTTTCTCAGTATTTTATTCTTTTGATATTATCATACATGATACTATCGTCTTGATTTCTTCTTCAGAGAGTTTATTGTTGTTGTAGAAATACAATTGATTTTTGTGTATTGATTTTGTATCCTGCAGCTTTGCTGAATTTTATTT"){
+				std::string kmerstr(readstr, i, kmerLength);
+				std::cerr << kmerstr << " " << occur[i] << std::endl;
+			}
 			if ( occur[i] )
 				++oneCnt ;
 			else
 				++zeroCnt ;
 		}
-		//printf( "%d %d\n",i, oneCnt ) ;
+		//printf( "%d %d\n",i, oneCnt ) ;		
 		int sum = oneCnt + zeroCnt ;	
 		int adjust = 0 ;
+		incount[i] = oneCnt;
+		totalcount[i] = sum;
 		/*if ( i - kmerLength + 1 >= kmerLength - 1 && i + kmerLength - 1 < readLength &&
 			qual[i] >= goodQuality )
 		{
@@ -398,7 +407,6 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 	kmerCode.Restart() ;
 
 	//printf( "!! %s\n", readId ) ;
-	//printf( "!! %s\n!! ", read ) ;
 	/*for ( i = 0 ; i < readLength ; ++i )
 	  printf( "%d", trustedPosition[i] ) ;
 	 printf( "\n" ) ; */
@@ -421,7 +429,21 @@ void StoreTrustedKmers( char *read, char *qual, int kmerLength, char badQuality,
 			   //if ( !strcmp( read, "ATCATCAGAGGGTCTCGTGTAGTGCTCCAGTACCTGAAATGCTTACGTTG" ) )
 			   //	printf( "Into table B: %d %d\n", i, oneCnt ) ;
 			   //printf( "%d %lld\n", i, kmerCode ) ;
-		   	   std::string kmerstr(readstr, i-kmerLength, kmerLength);
+		   	   std::string kmerstr(readstr, i-kmerLength+1, kmerLength);
+		   	   if(kmerstr == "CCCCCCCCCTCGCCCCCCCCCCCCCCCCCCC"){
+		   	   		printf( "%s %d\n", read, oneCnt ) ;
+					std::cerr << "in: "; 
+					for(int j = i-kmerLength+1; j < i+1; ++j){std::cerr << incount[j] << ", ";}
+					std::cerr << std::endl;
+					std::cerr << "possible: ";
+					for(int j = i-kmerLength+1; j < i+1; ++j){std::cerr << totalcount[j] << ", ";}
+					std::cerr << std::endl;
+					std::cerr << "trusted: ";
+					for(int j = i-kmerLength+1; j < i+1; ++j){std::cerr << trustedPosition[j] << ", ";}
+					std::cerr << std::endl;
+		   	   }
+
+
 			   trustedKmers->Put( kmerCode, true );
 			   (*counter)++;
 			   trustfile->Puts(kmerstr.append("\n").c_str());

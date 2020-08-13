@@ -484,8 +484,8 @@ int main( int argc, char *argv[] )
 	// Prepare data structures and other data.
 	//Store kmers(1000000000ull) ;
 	//Store trustedKmers(1000000000ull) ;
-	Store kmers((uint64_t)( genomeSize * 1.5 ), 0.01 ) ;
-	Store trustedKmers((uint64_t)( genomeSize * 1.5 ), 0.0005 ) ;
+	Store kmers((uint64_t)( genomeSize * 1.5 ), 0.000001 ) ;
+	Store trustedKmers((uint64_t)( genomeSize * 1.5 ), 0.000000001 ) ;
 	
 
 	if ( numOfThreads > 1 )
@@ -653,11 +653,11 @@ if ( loadTrustedKmers == NULL ) // a very long if state-ment, I avoid the indent
 			}
 		}
 	}
-	/*for ( i = 1 ; i <= kmerLength ; ++i )
+    printf("Thresholds: ");
+	for ( i = 1 ; i <= kmerLength ; ++i )
 	{
-		printf( "%d %d\n", threshold[i] + 1, i ) ;
+		printf( "%d ", threshold[i] ) ;
 	}
-	exit( 1 ) ;*/
 	PrintLog( "Finish sampling kmers" ) ;
 	
 	sprintf( buffer, "Bloom filter A's false positive rate: %lf", tableAFP ) ;

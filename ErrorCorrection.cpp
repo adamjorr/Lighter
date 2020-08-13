@@ -1,5 +1,6 @@
 #include "ErrorCorrection.h"
 #include <string.h>
+#include <iostream>
 
 //#define DEBUG 
 
@@ -214,6 +215,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 //	KmerCode kmerCode( inCode ) ;
 	KmerCode tmpKmerCode( 0 ) ;
+	std::string tmpkmerstr;
 	badPrefix = badSuffix = 0 ;
 	info = 0 ;
 
@@ -376,9 +378,10 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			}
 		}
 		else
-		{
+   		{
 			// Adjust the anchor if necessary
 			// Test whether the current anchor is good
+            fixesfile.Puts("(RADJUSTANCHOR?)");
 			for ( i = k ; i < k + kmerLength ; ++i )
 				kmerCode.Append( read[i] ) ;
 			int c ;
@@ -409,6 +412,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 
 			if ( c < 4 )
 			{
+                fixesfile.Puts("(RNOANCHORADJUST)");
 				//kmerCode.ShiftRight( 1 ) ; Seems wrong
 				for ( i = k - 1 ; i < k + kmerLength - 1 ; ++i )
 					kmerCode.Append( read[i] ) ;
@@ -432,6 +436,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 						tmpKmerCode = kmerCode ;
 						tmpKmerCode.ShiftRight() ;
 						tmpKmerCode.Append( numToNuc[c] ) ;
+                        fixesfile.Puts(("(??? " + std::to_string(j) + "/" + std::to_string(i-1) + ")").c_str());
 						if ( kmers->IsIn( tmpKmerCode ) ) 
 						{	
 							++alternativeCnt ;
@@ -471,10 +476,13 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 	}*/
 
 	std::string rhs = std::to_string(i);
+	// std::cerr << std::string(read) << std::endl;
+	std::string kmerstr = std::string(read).substr(i-kmerLength+1,kmerLength-1);
 
 	for ( ; i < readLength ; )
 	{
 		KmerCode fixedKmerCode( kmerCode ) ;
+		std::string fixedkmerstr = kmerstr;
 		int maxTo = -1 ;
 		int maxChange = -1 ;
 		int maxCnt = 0 ;
@@ -485,8 +493,11 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 		{
 			//kmerCode = ( fixedKmerCode << (uint64_t)2 ) & mask ;
 			//kmerCode = kmerCode | (uint64_t)j ;
+			kmerstr = fixedkmerstr;
+			kmerstr.push_back(numToNuc[j]);
 			kmerCode = fixedKmerCode ;
 			kmerCode.Append( numToNuc[j] ) ;
+			// std::cerr << kmerstr << " " << i << " " << kmers->IsIn( kmerCode ) << std::endl;
 			//printf( "?code=%llu\n", kmerCode.GetCode() ) ;
 			if ( !kmers->IsIn( kmerCode ) )
 				continue ;
@@ -497,9 +508,13 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			// How many kmers this change can fix
 			for ( k = from ; k <= to ; ++k )
 			{
+				kmerstr.push_back(read[k]);
+				kmerstr = kmerstr.substr(1,std::string::npos);
 				kmerCode.Append( read[k] ) ;
-				if ( !kmers->IsIn( kmerCode ) )
+				// std::cerr << kmerstr << " " << k << " " << kmers->IsIn( kmerCode ) << std::endl;
+				if ( !kmers->IsIn( kmerCode ) ){
 					break ;
+				}
 			}
 			
 			// Try to extend 1 position
@@ -519,6 +534,8 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 					if ( l < 4 )
 					{
 						//printf( "hi\n" ) ;
+						kmerstr.push_back(numToNuc[l]);
+						kmerstr = kmerstr.substr(1,std::string::npos);
 						kmerCode.Append( numToNuc[l] ) ;
 						++k ;
 					}
@@ -534,10 +551,14 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 					++maxCnt ;
 				}
 				else*/
+				// if(std::string(read) == "GGTGTGCACCTGTAGTCCCAGCTACTCGGGAGGCTGAGGCAGGAGAATTGCTCAAACCTGGGAGGTGGAGGTTGCAGTGAGCCAAGATTGTACCACTGTACTCCAGCCTGGGAAACAGAGCAAGACTCTGTGTCAAAAAGAAAAAACATAT"){
+				// std::cerr << kmerstr << " L" << std::endl;
+				// }
 				maxCnt = 1 ;
 				maxTo = k ;
 				maxChange = j ;
 				tmpKmerCode = kmerCode ;
+				tmpkmerstr = kmerstr;
 			}
 			/*else if ( k - from + 1 >= kmerLength / 2 )
 			{
@@ -546,15 +567,23 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			else if ( k == maxTo )
 			{
 				++maxCnt ;
+				// if(std::string(read) == "GGTGTGCACCTGTAGTCCCAGCTACTCGGGAGGCTGAGGCAGGAGAATTGCTCAAACCTGGGAGGTGGAGGTTGCAGTGAGCCAAGATTGTACCACTGTACTCCAGCCTGGGAAACAGAGCAAGACTCTGTGTCAAAAAGAAAAAACATAT"){
+				// std::cerr << kmerstr << " " << k << kmers->IsIn( kmerCode ) << std::endl;
+				// std::cerr << kmerstr << " T" << std::endl;	
+				// }
+                fixesfile.Puts(("{" + std::to_string(maxCnt) + "}").c_str());
 				if ( k == i + 1 && j == nucToNum[ read[i] - 'A' ] )
 				{
 					maxCnt = 1 ;
 					maxChange = j ;
 					tmpKmerCode = kmerCode ;
+					tmpkmerstr = kmerstr;
+                    fixesfile.Puts("(MULTIPLECHEAT1)");
 				}
 				else if ( k == i + 1 && maxChange == nucToNum[ read[i] - 'A' ] )
 				{
 					maxCnt = 1 ;
+                    fixesfile.Puts("(MULTIPLECHEAT2)");
 				}
 			}
 			//printf( "%d\n", j ) ;
@@ -576,6 +605,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 				noCandidateKmer = true ;
 			trimStart = i ;
 			info = 2 ;
+            fixesfile.Puts(("(RTOOFAR" + std::to_string(maxTo) + " " + std::to_string(to) + " " + std::to_string(to-i+1) + ")").c_str());
 			break ;
 			//}
 			//else
@@ -610,6 +640,7 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 			else
 			{
 				kmerCode = tmpKmerCode ;
+				kmerstr = tmpkmerstr.substr(0, tmpkmerstr.length()-1);
 				kmerCode.ShiftRight() ;
 				i = maxTo ;
 			}
@@ -626,12 +657,17 @@ int ErrorCorrection( char *read, char *qual, KmerCode& kmerCode, int maxCorrecti
 				break ;
 
 			kmerCode.Restart() ;
+			kmerstr = "";
 			for ( i = k - 1 + 1 ; i < k - 1 + kmerLength - 1 + 1 ; ++i  )
 			{
-				if ( fix[i] < 0 )
+				if ( fix[i] < 0 ){
 					kmerCode.Append( read[i] ) ;
-				else
+					kmerstr.push_back(read[i]);
+				}
+				else{
 					kmerCode.Append( numToNuc[ fix[i] ] ) ;
+					kmerstr.push_back(numToNuc[fix[i]]);
+				}
 			}
 			continue ;
 		}
